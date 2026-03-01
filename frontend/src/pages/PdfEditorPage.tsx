@@ -16,17 +16,11 @@ export default function PdfEditorPage() {
     const [loading, setLoading] = useState(false)
     const [activePage, setActivePage] = useState<number>(0)
     const [error, setError] = useState('')
-
-    // Render trigger to force image reload when PDF changes
     const [renderKey, setRenderKey] = useState(0)
-
-    // Modals & Interaction States
     type ToolMode = 'none' | 'text' | 'image' | 'redact'
     const [toolMode, setToolMode] = useState<ToolMode>('none')
     const [interactPos, setInteractPos] = useState<{ x: number, y: number, w?: number, h?: number } | null>(null)
     const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null)
-
-    // Blocks for native-like editing
     const [blocks, setBlocks] = useState<PdfTextBlock[]>([])
     const [editingState, setEditingState] = useState<{
         block: PdfTextBlock;
@@ -109,7 +103,6 @@ export default function PdfEditorPage() {
         }
     }
 
-    // Drag & Drop for thumbnails (Reorder)
     const dragItem = useRef<number | null>(null)
     const dragOverItem = useRef<number | null>(null)
 
@@ -252,7 +245,7 @@ export default function PdfEditorPage() {
         setToolMode('none');
         setInteractPos(null);
         setLoading(true);
-        e.currentTarget.value = ''; // reset
+        e.currentTarget.value = '';
         try {
             const info = await addImage(session!.session_id, activePage, file, pdfX, pdfY, pdfW, pdfH);
             refreshImages(info);

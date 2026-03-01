@@ -1,9 +1,3 @@
-"""
-PDF Editor Service — Session-based PDF manipulation using PyMuPDF + pikepdf.
-
-Each uploaded PDF gets a session_id. Operations modify the PDF in-place
-within the session. Sessions auto-expire after EXPIRY_MINUTES.
-"""
 import os
 import io
 import time
@@ -27,7 +21,7 @@ _lock = threading.Lock()
 _sessions: Dict[str, Dict[str, Any]] = {}
 
 
-# ─── Session Management ──────────────────────────────────────
+
 
 def _session_path(session_id: str) -> str:
     return os.path.join(TEMP_DIR, f"pdfeditor_{session_id}.pdf")
@@ -71,7 +65,7 @@ def cleanup_expired():
         log.info("Cleaned up %d expired PDF editor sessions", len(expired))
 
 
-# ─── Upload & Info ────────────────────────────────────────────
+
 
 def upload_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Save uploaded PDF, create session, return metadata."""
@@ -145,7 +139,7 @@ def get_session_info(session_id: str) -> Dict[str, Any]:
     }
 
 
-# ─── Page Rendering ──────────────────────────────────────────
+
 
 def render_page(session_id: str, page_num: int, scale: float = 1.5) -> bytes:
     """Render a page as PNG bytes."""
@@ -185,7 +179,7 @@ def render_all_thumbnails(session_id: str) -> List[str]:
     return thumbnails
 
 
-# ─── Page Operations ──────────────────────────────────────────
+
 
 def delete_pages(session_id: str, page_indices: List[int]) -> Dict[str, Any]:
     """Delete pages at given indices (0-based)."""
@@ -236,7 +230,7 @@ def rotate_pages(session_id: str, page_indices: List[int], angle: int) -> Dict[s
     return get_session_info(session_id)
 
 
-# ─── Content Operations ──────────────────────────────────────
+
 
 def add_text(
     session_id: str,
@@ -380,27 +374,22 @@ def edit_text_block(
 
     page = doc[page_num]
     
-    # Redact the old block (expand slightly to catch ascenders/descenders)
     wipe_rect = fitz.Rect(old_x0 - 2, old_y0 - 2, old_x1 + 2, old_y1 + 2)
     page.draw_rect(wipe_rect, color=(1, 1, 1), fill=(1, 1, 1))
 
-    # Parse color
     color_hex = color_hex.lstrip("#")
     r = int(color_hex[0:2], 16) / 255.0
     g = int(color_hex[2:4], 16) / 255.0
     b = int(color_hex[4:6], 16) / 255.0
 
-    # Insert new text
     if new_text.strip():
-        # Textbox allows wrapping inside the rect. 
-        # We give it plenty of height and width so it never clips and aborts rendering.
         text_rect = fitz.Rect(new_x0, new_y0, max(new_x0 + 10, page.rect.width - 20), page.rect.height - 20)
         page.insert_textbox(text_rect, new_text, fontsize=font_size, color=(r,g,b), fontname="helv", align=0)
 
     _save_doc_and_close(session_id, doc)
     return get_session_info(session_id)
 
-# ─── Security ────────────────────────────────────────────────
+
 
 def protect_pdf(session_id: str, password: str) -> Dict[str, Any]:
     """Encrypt the PDF with a password using pikepdf."""
