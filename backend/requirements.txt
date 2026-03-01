@@ -1,0 +1,18 @@
+fastapi[standard]
+uvicorn[standard]
+python-multipart
+pydantic-settings
+# Audio
+deepfilternet
+noisereduce
+librosa
+soundfile
+pydub
+# Documents
+pdf2docx
+PyMuPDF
+python-docx
+# Translation
+transformers
+sentencepiece
+sacremoses

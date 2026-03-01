@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-kick-black text-kick-white font-sans antialiased;
+        font-feature-settings: "cv11", "ss01";
+    }
+
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-kick-dark;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-kick-border rounded-full;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-kick-muted;
+    }
+}
+
+@layer components {
+    .glow-green {
+        box-shadow: 0 0 24px rgba(83, 252, 24, 0.3);
+    }
+
+    .glow-green-sm {
+        box-shadow: 0 0 12px rgba(83, 252, 24, 0.2);
+    }
+
+    .border-glow {
+        @apply border border-kick-green/30;
+        box-shadow: 0 0 16px rgba(83, 252, 24, 0.1);
+    }
+}
+
+/* Wave animation bars */
+.wave-bar {
+    display: inline-block;
+    width: 3px;
+    border-radius: 2px;
+    background: #53FC18;
+    transform-origin: bottom;
+    animation: bar 1.2s ease-in-out infinite;
+}
+
+audio::-webkit-media-controls-panel {
+    background-color: #1E1E1E;
+}
+
+audio {
+    border-radius: 8px;
+}
