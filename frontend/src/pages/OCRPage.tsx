@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -44,6 +45,11 @@ export default function OCRPage() {
 
     return (
         <div className="flex flex-col gap-6 animate-fade-up">
+            <Helmet>
+                <title>Extraer Texto de Imágenes (OCR) — Media-AI-Processor</title>
+                <meta name="description" content="Usa Inteligencia Artificial para sacar el texto de cualquier imagen, foto o captura de pantalla gratis y sin internet." />
+                <meta name="keywords" content="ocr online, sacar texto de imagen, convertir imagen a texto, extraer texto de foto, escaner ocr, easyocr" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Escáner OCR Avanzado</h1>
                 <p className="text-kick-muted text-sm">Extrae el texto de cualquier imagen instantáneamente de forma local.</p>

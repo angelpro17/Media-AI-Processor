@@ -7,3 +7,4 @@ export type IconName =
     | 'copy' | 'alert' | 'pdf' | 'word' | 'image'
     | 'waveform' | 'chevronRight' | 'mic' | 'videoCamera'
     | 'scissors' | 'layers' | 'compress' | 'scan' | 'list'
+    | 'menu'

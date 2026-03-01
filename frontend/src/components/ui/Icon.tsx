@@ -6,7 +6,7 @@ import {
     LightningIcon, DiamondIcon, ArrowsIcon, PlayIcon, PauseIcon,
     CopyIcon, AlertIcon, PdfIcon, WordIcon, ImageIcon, WaveformIcon,
     ChevronRightIcon, MicIcon, VideoCameraIcon, ScissorsIcon,
-    LayersIcon, CompressIcon, ScanIcon, ListIcon
+    LayersIcon, CompressIcon, ScanIcon, ListIcon, MenuIcon
 } from '@/assets/icons/icons'
 
 type IconMap = Record<IconName, React.FC<SVGProps<SVGSVGElement>>>
@@ -40,6 +40,7 @@ const ICONS: IconMap = {
     compress: CompressIcon,
     scan: ScanIcon,
     list: ListIcon,
+    menu: MenuIcon,
 }
 
 interface IconProps extends SVGProps<SVGSVGElement> {

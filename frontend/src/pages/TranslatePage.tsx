@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -91,6 +92,11 @@ export default function TranslatePage() {
 
     return (
         <div className="flex flex-col gap-6">
+            <Helmet>
+                <title>Traductor IA Offline (Texto y Docs) — Media-AI-Processor</title>
+                <meta name="description" content="Traductor offline gratuito de textos, PDFs, Word (DOCX) y subtítulos manteniendo el formato original mediante IA." />
+                <meta name="keywords" content="traductor ia, traducir pdf, traducir docx gratis, traductor de subtitulos, traductor de documentos offline" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Traducción Automática</h1>
                 <p className="text-kick-muted text-sm">Traducción profesional mediante modelos de inteligencia artificial locales.</p>

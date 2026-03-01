@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { submitSummarizeDocument, summarizeText } from '@/services/summarizeService'
 import { useJobPoller } from '@/hooks/useJobPoller'
 
@@ -64,6 +65,11 @@ export default function SummarizePage() {
 
     return (
         <div className="flex flex-col gap-6">
+            <Helmet>
+                <title>Resumir Textos Largos y Documentos — Media-AI-Processor</title>
+                <meta name="description" content="Genera resúmenes automáticos de textos extensos o documentos (PDF, DOCX) en segundos con IA." />
+                <meta name="keywords" content="resumidor de textos, resumir pdf con ia, acortar textos largos, hacer resumen automático, ia para resumir" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Resumen Automático</h1>
                 <p className="text-kick-muted text-sm">Destila lo más importante de tus textos y documentos al instante, usando el potente motor de BART Large CNN localmente.</p>

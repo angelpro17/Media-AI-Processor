@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -38,6 +39,11 @@ export default function VideoPage() {
 
     return (
         <div className="flex flex-col gap-6 animate-fade-up">
+            <Helmet>
+                <title>Extraer Audio de Video — Media-AI-Processor</title>
+                <meta name="description" content="Extrae el audio (MP3) de tus videos MP4, AVI, MOV o MKV offline al instante. Conversor de video a audio gratis sin límites de tamaño." />
+                <meta name="keywords" content="video a mp3, extraer audio de video, convertir mp4 a mp3, extractor de audio offline, conversor de video gratis" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Herramientas de Video</h1>
                 <p className="text-kick-muted text-sm">Extrae el audio original (MP3) de cualquier video rápidamente con FFmpeg.</p>

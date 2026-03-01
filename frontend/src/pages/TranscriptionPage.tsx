@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -53,6 +54,11 @@ export default function TranscriptionPage() {
 
     return (
         <div className="flex flex-col gap-6 animate-fade-up">
+            <Helmet>
+                <title>Transcribir Audio y Video a Texto — Media-AI-Processor</title>
+                <meta name="description" content="Convierte voz, dictados, entrevistas y videos a texto o subtítulos (SRT, VTT) usando IA (Whisper) gratis y sin conexión a internet." />
+                <meta name="keywords" content="transcribir audio a texto, video a texto, conversor audio a texto, crear subtitulos automáticos, whisper ia, offline" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Transcripción Inteligente</h1>
                 <p className="text-kick-muted text-sm">Convierte audio y video a texto o subtítulos usando OpenAI Whisper localmente.</p>

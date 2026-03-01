@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import Icon from '@/components/ui/Icon'
 
 interface Feature {
@@ -31,6 +32,11 @@ const FEATURES: Feature[] = [
 export default function HomePage() {
     return (
         <div className="flex flex-col gap-12 animate-fade-up">
+            <Helmet>
+                <title>Media-AI-Processor — Plataforma Todo-en-Uno de IA Local</title>
+                <meta name="description" content="Media-AI-Processor es tu suite offline de herramientas potenciadas por Inteligencia Artificial. Limpieza de audio, transcripción, traducción, OCR de imágenes a texto y resúmenes de documentos gratis y sin internet." />
+                <meta name="keywords" content="audioclean, limpiar audio con ia, transcribir audio a texto gratis, traducir documentos pdf, extraer texto de imagenes ocr, resumir texto largo, ia local, offline" />
+            </Helmet>
             <div className="pt-4">
 
                 <h1 className="text-4xl font-black text-kick-white leading-tight mb-3">

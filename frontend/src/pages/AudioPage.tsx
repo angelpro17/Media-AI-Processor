@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -57,6 +58,11 @@ export default function AudioPage() {
 
     return (
         <div className="flex flex-col gap-6 animate-fade-up">
+            <Helmet>
+                <title>Mejorar Audio con IA — Media-AI-Processor</title>
+                <meta name="description" content="Elimina el ruido de fondo, eco y siseos de tus grabaciones de audio y voz gratis usando inteligencia artificial (DeepFilterNet3) sin necesidad de internet." />
+                <meta name="keywords" content="mejorar audio con ia, quitar ruido de fondo inteligente, limpiar voz, noise reduction ai, deepfilternet, audio enhancer" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Limpieza de Audio AI</h1>
                 <p className="text-kick-muted text-sm">Elimina el ruido de fondo con DeepFilterNet3 — calidad broadcast garantizada.</p>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
@@ -80,6 +81,11 @@ export default function DocsPage() {
 
     return (
         <div className="flex flex-col gap-6 animate-fade-up">
+            <Helmet>
+                <title>Convertir Documentos (PDF, Word, Excel) — Media-AI-Processor</title>
+                <meta name="description" content="Convierte archivos PDF a Word (DOCX), Word a PDF, Excel a PDF y más. Conversor de documentos offline totalmente gratuito y privado." />
+                <meta name="keywords" content="pdf a docx, word a pdf, powerpoint a pdf, excel a pdf, convertir pdf a word gratis, pdf a imagen, documentos offline" />
+            </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Herramientas de Documentos</h1>
                 <p className="text-kick-muted text-sm">Convierte libremente y manipula PDFs (unir, dividir, comprimir) completamente gratis.</p>
