@@ -20,6 +20,7 @@ from modules.transcription.router import router as transcription_router
 from modules.video.router import router as video_router
 from modules.ocr.router import router as ocr_router
 from modules.summarize.router import router as summarize_router
+from modules.pdfeditor.router import router as pdfeditor_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s — %(message)s")
 log = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ app.include_router(transcription_router, prefix="/api/transcribe",  tags=["Trans
 app.include_router(video_router,       prefix="/api/video",         tags=["Video Tools"])
 app.include_router(ocr_router,         prefix="/api/ocr",           tags=["OCR"])
 app.include_router(summarize_router,   prefix="/api/summarize",     tags=["Summarize"])
+app.include_router(pdfeditor_router,   prefix="/api/pdf-editor",    tags=["PDF Editor"])
 
 
 @app.get("/api/health")

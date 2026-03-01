@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { submitSummarizeDocument, summarizeText } from '@/services/summarizeService'
+import { summarizeText, submitSummarizeDocument } from '@/services/summarizeService'
 import { useJobPoller } from '@/hooks/useJobPoller'
 
 import Card, { CardHeader } from '@/components/ui/Card'
@@ -18,10 +18,9 @@ type TabId = 'text' | 'document'
 export default function SummarizePage() {
     const [tab, setTab] = useState<TabId>('text')
 
-    // Text state
+    // Text state — now uses job poller like documents
     const [inputText, setInputText] = useState('')
-    const [outputText, setOutputText] = useState('')
-    const [isTranslatingText, setIsTranslatingText] = useState(false)
+    const textJob = useJobPoller()
     const [textError, setTextError] = useState('')
 
     // Doc state
@@ -30,17 +29,18 @@ export default function SummarizePage() {
 
     const handleTextSubmit = async () => {
         if (!inputText.trim()) return
-        setIsTranslatingText(true)
         setTextError('')
         try {
-            const summary = await summarizeText(inputText)
-            setOutputText(summary)
+            const jobId = await summarizeText(inputText)
+            textJob.start(jobId)
         } catch (err: any) {
             setTextError(err?.response?.data?.detail || 'Error al resumir el texto.')
-        } finally {
-            setIsTranslatingText(false)
         }
     }
+
+    const textProcessing = ['pending', 'processing'].includes(textJob.status || '')
+    const textDone = textJob.status === 'done'
+    const textJobError = textJob.status === 'error'
 
     const handleDocSubmit = async () => {
         if (!docFile) return
@@ -72,14 +72,14 @@ export default function SummarizePage() {
             </Helmet>
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Resumen Automático</h1>
-                <p className="text-kick-muted text-sm">Destila lo más importante de tus textos y documentos al instante, usando el potente motor de BART Large CNN localmente.</p>
+                <p className="text-kick-muted text-sm">Destila lo más importante de tus textos y documentos al instante, 100% local y en cualquier idioma.</p>
             </div>
 
             <div className="flex border-b border-kick-border">
                 {TABS.map((t) => (
                     <button
                         key={t.id}
-                        onClick={() => { setTab(t.id as TabId); setOutputText('') }}
+                        onClick={() => { setTab(t.id as TabId); textJob.reset(); setTextError('') }}
                         className={[
                             'flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-all duration-150',
                             tab === t.id ? 'border-kick-green text-kick-green' : 'border-transparent text-kick-muted hover:text-kick-white',
@@ -106,16 +106,24 @@ export default function SummarizePage() {
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                         />
-                        {textError && (
+
+                        {textProcessing && (
+                            <div className="border border-kick-border rounded-xl p-4">
+                                <WaveLoader label="Resumiendo texto..." />
+                                <ProgressBar value={textJob.progress || 0} className="mt-2" />
+                            </div>
+                        )}
+
+                        {(textError || textJobError) && (
                             <div className="flex items-center gap-2 text-red-400 bg-red-400/10 p-3 rounded-xl text-sm border border-red-400/20">
                                 <Icon name="alert" className="w-4 h-4 flex-shrink-0" />
-                                {textError}
+                                {textError || textJob.error || 'Error al resumir el texto.'}
                             </div>
                         )}
                         <Button
                             onClick={handleTextSubmit}
-                            disabled={!inputText.trim() || isTranslatingText}
-                            loading={isTranslatingText}
+                            disabled={!inputText.trim() || textProcessing}
+                            loading={textProcessing}
                             icon="list"
                             className="w-full justify-center"
                         >
@@ -130,7 +138,9 @@ export default function SummarizePage() {
                             icon={<Icon name="list" className="w-5 h-5 text-kick-white" />}
                         />
                         <div className="w-full h-[300px] bg-kick-dark border border-kick-border rounded-xl p-4 text-kick-white overflow-y-auto custom-scrollbar font-mono text-sm leading-relaxed whitespace-pre-wrap select-all">
-                            {outputText || (
+                            {textDone && textJob.summary ? (
+                                textJob.summary
+                            ) : (
                                 <span className="text-kick-muted select-none flex items-center justify-center h-full italic">
                                     El resumen aparecerá aquí...
                                 </span>

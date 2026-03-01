@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from modules.summarize.service import summarize_text, run_document_summarization
+from modules.summarize.service import run_text_summarization, run_document_summarization
 from core.jobs import create_job
 
 log = logging.getLogger(__name__)
@@ -20,12 +20,16 @@ class SummarizeRequest(BaseModel):
     text: str = Field(..., max_length=MAX_CHARS)
 
 @router.post("")
-def summarize(req: SummarizeRequest):
-    """Summarize plain text (synchronous)."""
+def summarize(req: SummarizeRequest, background_tasks: BackgroundTasks):
+    """Summarize plain text (async via job system)."""
     if not req.text.strip():
         raise HTTPException(400, "El texto no puede estar vacío.")
-    result = summarize_text(req.text)
-    return JSONResponse({"summary": result})
+
+    job_id = uuid.uuid4().hex
+    create_job(job_id, filename="resumen.txt", mime_type="text/plain")
+    background_tasks.add_task(run_text_summarization, job_id, req.text)
+
+    return JSONResponse({"job_id": job_id})
 
 @router.post("/document")
 async def summarize_document(

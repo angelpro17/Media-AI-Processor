@@ -12,6 +12,7 @@ pydub
 pdf2docx
 PyMuPDF
 python-docx
+pikepdf
 # Translation
 transformers
 sentencepiece

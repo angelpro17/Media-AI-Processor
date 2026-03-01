@@ -7,6 +7,7 @@ export interface JobState {
     error: string | null
     downloadUrl: string | null
     filename: string | null
+    summary?: string | null
 }
 
 export interface ApiJob {
@@ -17,4 +18,5 @@ export interface ApiJob {
     mime_type: string
     result_path: string | null
     error: string | null
+    summary?: string | null
 }

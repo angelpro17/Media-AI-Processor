@@ -4,7 +4,7 @@ from core.jobs import create_job
 import tempfile
 import os
 
-router = APIRouter(prefix="/video", tags=["Video Tools"])
+router = APIRouter(tags=["Video Tools"])
 
 SUPPORTED_EXTS = {"mp4", "mkv", "avi", "mov", "webm"}
 MAX_MB = 200

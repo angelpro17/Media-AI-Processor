@@ -4,7 +4,7 @@ from core.jobs import create_job
 import tempfile
 import os
 
-router = APIRouter(prefix="/transcription", tags=["Transcription"])
+router = APIRouter(tags=["Transcription"])
 
 SUPPORTED_EXTS = {"mp3", "wav", "m4a", "ogg", "flac", "mp4", "mkv", "avi", "mov"}
 MAX_MB = 100

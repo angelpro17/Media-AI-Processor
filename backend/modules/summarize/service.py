@@ -1,126 +1,169 @@
+"""
+Extractive text summarizer.
+Works in any language — selects the most important sentences from the original text
+using TF-IDF-style word-frequency scoring. No heavy ML model required.
+"""
 import logging
-from typing import Dict, Any, List
-from transformers import pipeline
+import re
+import math
+from collections import Counter
+from typing import List, Tuple
 
 log = logging.getLogger(__name__)
 
-MODEL_NAME = "facebook/bart-large-cnn"
+# Common stopwords (Spanish + English) to ignore when scoring
+_STOPWORDS = frozenset(
+    # Spanish
+    "de la el en y a los las del un una que es por con para se al lo como su más no o "
+    "pero sino también entre sobre todo este esta estos estas ese esa esos esas aquel "
+    "aquella ha sido ser estar muy ya desde hasta donde cuando fue han sido tiene tienen "
+    "sin embargo así puede pueden cual cuales hay le les nos me te mi mis tu tus sus "
+    "otro otra otros otras cada uno una unos unas era eran ser hay "
+    # English
+    "the a an in to of and is for on with this that it are was be has have had will would "
+    "can could should may might shall not or but from at by as do does did been being if "
+    "its our their your my his her we they them him us all some any no between into "
+    "through during before after above below such than too very can just don so now".split()
+)
 
-_cache: Dict[str, Any] = {}
 
-def _get_pipeline():
-    if "summarizer" not in _cache:
-        log.info("Loading summarization model: %s", MODEL_NAME)
-        # Using device=-1 for CPU. Model handles padding/truncation internally if needed,
-        # but BART has a max context of 1024 tokens. We'll handle chunking if text is too long.
-        summarizer = pipeline("summarization", model=MODEL_NAME, device=-1)
-        _cache["summarizer"] = summarizer
-        log.info("Model %s loaded", MODEL_NAME)
-    return _cache["summarizer"]
+def _split_sentences(text: str) -> List[str]:
+    """Split text into sentences, handling common abbreviations."""
+    # Split on sentence-ending punctuation followed by space + uppercase or end
+    parts = re.split(r'(?<=[.!?;])\s+', text.strip())
+    # Filter out very short fragments
+    return [s.strip() for s in parts if len(s.strip()) > 15]
 
-def summarize_text(text: str) -> str:
-    """Summarize plain text."""
+
+def _score_sentences(sentences: List[str]) -> List[Tuple[int, float, str]]:
+    """Score sentences by word frequency relevance."""
+    # Build word frequency from all text
+    all_words = []
+    for sent in sentences:
+        words = re.findall(r'\b\w{3,}\b', sent.lower())
+        all_words.extend(w for w in words if w not in _STOPWORDS)
+
+    if not all_words:
+        return [(i, 1.0, s) for i, s in enumerate(sentences)]
+
+    freq = Counter(all_words)
+    max_freq = max(freq.values())
+    # Normalize to 0-1
+    norm_freq = {w: c / max_freq for w, c in freq.items()}
+
+    scored = []
+    for i, sent in enumerate(sentences):
+        words = re.findall(r'\b\w{3,}\b', sent.lower())
+        content_words = [w for w in words if w not in _STOPWORDS]
+
+        if not content_words:
+            scored.append((i, 0.0, sent))
+            continue
+
+        # Average word importance
+        word_score = sum(norm_freq.get(w, 0) for w in content_words) / len(content_words)
+
+        # Length bonus: prefer medium-length sentences (not too short, not too long)
+        length_factor = min(1.0, len(content_words) / 8)
+
+        # Position bonus: first and last sentences are often important
+        n = len(sentences)
+        if i == 0:
+            pos_bonus = 1.3
+        elif i == n - 1:
+            pos_bonus = 1.1
+        elif i < n * 0.2:
+            pos_bonus = 1.15
+        else:
+            pos_bonus = 1.0
+
+        score = word_score * length_factor * pos_bonus
+        scored.append((i, score, sent))
+
+    return scored
+
+
+def summarize_text(text: str, ratio: float = 0.35) -> str:
+    """
+    Extractive summarization: pick the most important sentences.
+    ratio: fraction of sentences to keep (0.0 - 1.0)
+    """
     if not text.strip():
         return ""
-        
-    summarizer = _get_pipeline()
-    
-    # BART handles up to ~1024 tokens. A safe character limit for English/Spanish chunks is ~3000 chars.
-    MAX_CHARS = 3000
-    
-    # If text is short enough, summarize it directly
-    if len(text) <= MAX_CHARS:
-        # Determine max_length based on input length
-        input_len = len(text.split())
-        max_len = min(130, max(30, int(input_len * 0.6)))
-        min_len = min(30, max(10, int(input_len * 0.2)))
-        
-        result = summarizer(text, max_length=max_len, min_length=min_len, do_sample=False)
-        return result[0]["summary_text"]
-        
-    # If text is too long, we need to chunk it, summarize chunks, and maybe summarize the summaries
-    paragraphs = text.split("\n")
-    chunks = []
-    current_chunk = ""
-    
-    for para in paragraphs:
-        if len(current_chunk) + len(para) > MAX_CHARS and current_chunk:
-            chunks.append(current_chunk.strip())
-            current_chunk = para
-        else:
-            current_chunk += "\n" + para
-            
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
-        
-    summarized_chunks = []
-    for chunk in chunks:
-        if len(chunk.strip()) < 50: # Too short to summarize meaningfully
-            summarized_chunks.append(chunk.strip())
-            continue
-            
-        input_len = len(chunk.split())
-        max_len = min(130, max(30, int(input_len * 0.6)))
-        min_len = min(30, max(10, int(input_len * 0.2)))
-        
-        try:
-            res = summarizer(chunk, max_length=max_len, min_length=min_len, do_sample=False)
-            summarized_chunks.append(res[0]["summary_text"])
-        except Exception as e:
-            log.warning("Failed to summarize chunk, returning original. Error: %s", e)
-            summarized_chunks.append(chunk)
-            
-    # Combine summaries
-    final_text = "\n\n".join(summarized_chunks)
-    
-    # If the combined summary is still longer than MAX_CHARS, we could do another pass,
-    # but for simplicity, we'll return the combined chunk summaries as bullet points or paragraphs.
-    return final_text
+
+    sentences = _split_sentences(text)
+
+    if len(sentences) <= 3:
+        return text.strip()
+
+    scored = _score_sentences(sentences)
+
+    # Number of sentences to select
+    n_select = max(2, min(len(sentences) - 1, int(math.ceil(len(sentences) * ratio))))
+
+    # Pick top-scoring sentences
+    top = sorted(scored, key=lambda x: x[1], reverse=True)[:n_select]
+
+    # Return them in original order for coherence
+    top.sort(key=lambda x: x[0])
+
+    return " ".join(s[2] for s in top)
+
+
+def run_text_summarization(job_id: str, text: str) -> None:
+    """Background job for text summarization."""
+    from core.jobs import update_job
+
+    try:
+        update_job(job_id, status="processing", progress=50)
+        summary = summarize_text(text)
+        update_job(job_id, status="done", progress=100, summary=summary)
+        log.info("Text summarization job %s done", job_id)
+    except Exception as e:
+        log.exception("Text summarization job %s failed", job_id)
+        update_job(job_id, status="error", error=str(e))
+
 
 def run_document_summarization(job_id: str, src_path: str, ext: str, out_name: str) -> None:
     import os, tempfile
     from core.jobs import update_job
-    from modules.translation.service import translate_docx, translate_pdf # we can't easily reuse pdf logic for extraction to summarize unless we use raw text
     import fitz
     from docx import Document
 
     out_dir = tempfile.gettempdir()
-    
+
     try:
         update_job(job_id, status="processing", progress=10)
-        
+
         text_content = ""
-        
-        # 1. Extract text based on format
+
         if ext == "pdf":
             doc = fitz.open(src_path)
             for page in doc:
                 text_content += page.get_text() + "\n"
             doc.close()
-            
+
         elif ext in ("docx", "doc"):
             doc = Document(src_path)
             for para in doc.paragraphs:
                 text_content += para.text + "\n"
-                
+
         elif ext == "txt":
             with open(src_path, "r", encoding="utf-8", errors="replace") as f:
                 text_content = f.read()
         else:
             raise ValueError(f"Formato no soportado para resumen: {ext}")
-            
+
         update_job(job_id, progress=40)
-        
-        # 2. Summarize
+
         summary = summarize_text(text_content)
-        
+
         update_job(job_id, progress=90)
-        
-        # 3. Save to output text file (always return txt for summary)
+
         out_path = os.path.join(out_dir, f"{job_id}_summary.txt")
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(summary)
-            
+
         update_job(job_id, status="done", progress=100,
                    result_path=out_path, filename=out_name, mime_type="text/plain")
         log.info("Doc summarization job %s done → %s", job_id, out_path)

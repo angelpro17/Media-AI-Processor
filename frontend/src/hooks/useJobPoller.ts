@@ -46,6 +46,7 @@ export function useJobPoller(): UseJobPollerReturn {
                         ...s,
                         downloadUrl: `/api/jobs/${jobId}/download`,
                         filename: data.filename,
+                        summary: data.summary || null,
                     }))
                 } else if (data.status === 'error') {
                     stopPolling()

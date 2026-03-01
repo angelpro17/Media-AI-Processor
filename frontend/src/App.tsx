@@ -8,6 +8,7 @@ import TranscriptionPage from './pages/TranscriptionPage'
 import VideoPage from './pages/VideoPage'
 import OCRPage from './pages/OCRPage'
 import SummarizePage from './pages/SummarizePage'
+import PdfEditorPage from './pages/PdfEditorPage'
 
 export default function App() {
     return (
@@ -21,6 +22,7 @@ export default function App() {
                 <Route path="ocr" element={<OCRPage />} />
                 <Route path="translate" element={<TranslatePage />} />
                 <Route path="summarize" element={<SummarizePage />} />
+                <Route path="pdf-editor" element={<PdfEditorPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
         </Routes>
