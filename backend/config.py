@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     max_text_chars: int = 10_000
 
     # LibreOffice
-    soffice_path: str = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+    soffice_path: str = "/usr/bin/soffice"
 
     class Config:
         env_file = ".env"

@@ -2,12 +2,20 @@ fastapi[standard]
 uvicorn[standard]
 python-multipart
 pydantic-settings
-# Audio
+httpx
+# Audio & AI models
+torch --index-url https://download.pytorch.org/whl/cpu
+torchaudio --index-url https://download.pytorch.org/whl/cpu
 deepfilternet
 noisereduce
 librosa
 soundfile
 pydub
+# Transcription
+openai-whisper
+# OCR
+easyocr
+opencv-python-headless
 # Documents
 pdf2docx
 PyMuPDF
