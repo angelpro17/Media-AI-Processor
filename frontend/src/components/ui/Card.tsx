@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
+import { motion, type HTMLMotionProps } from 'framer-motion'
 
-interface CardProps {
+interface CardProps extends HTMLMotionProps<"div"> {
     children: ReactNode
     className?: string
     glow?: boolean
@@ -13,17 +14,21 @@ interface CardHeaderProps {
     children?: ReactNode
 }
 
-export default function Card({ children, className = '', glow = false }: CardProps) {
+export default function Card({ children, className = '', glow = false, ...props }: CardProps) {
     return (
-        <div
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
             className={[
-                'bg-kick-surface border border-kick-border rounded-xl p-6 animate-fade-up',
-                glow ? 'border-glow' : '',
+                'bg-kick-surface border border-kick-border rounded-xl p-6',
+                glow ? 'border-glow' : 'hover:border-kick-border/80 transition-colors',
                 className,
             ].join(' ')}
+            {...props}
         >
             {children}
-        </div>
+        </motion.div>
     )
 }
 

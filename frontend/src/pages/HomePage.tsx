@@ -31,7 +31,7 @@ const FEATURES: Feature[] = [
 
 export default function HomePage() {
     return (
-        <div className="flex flex-col gap-12 animate-fade-up">
+        <div className="flex flex-col gap-12">
             <Helmet>
                 <title>Media-AI-Processor — Plataforma Todo-en-Uno de IA Local</title>
                 <meta name="description" content="Media-AI-Processor es tu suite offline de herramientas potenciadas por Inteligencia Artificial. Limpieza de audio, transcripción, traducción, OCR de imágenes a texto y resúmenes de documentos gratis y sin internet." />

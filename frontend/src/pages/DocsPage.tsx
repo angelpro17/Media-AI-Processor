@@ -80,7 +80,7 @@ export default function DocsPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-up">
+        <div className="flex flex-col gap-6">
             <Helmet>
                 <title>Convertir Documentos (PDF, Word, Excel) — Media-AI-Processor</title>
                 <meta name="description" content="Convierte archivos PDF a Word (DOCX), Word a PDF, Excel a PDF y más. Conversor de documentos offline totalmente gratuito y privado." />

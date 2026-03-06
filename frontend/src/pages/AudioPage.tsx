@@ -57,7 +57,7 @@ export default function AudioPage() {
     const isProcessing = job.status === 'pending' || job.status === 'processing'
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-up">
+        <div className="flex flex-col gap-6">
             <Helmet>
                 <title>Mejorar Audio con IA — Media-AI-Processor</title>
                 <meta name="description" content="Elimina el ruido de fondo, eco y siseos de tus grabaciones de audio y voz gratis usando inteligencia artificial (DeepFilterNet3) sin necesidad de internet." />

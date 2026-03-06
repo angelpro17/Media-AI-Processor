@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import { motion, type HTMLMotionProps } from 'framer-motion'
 import Icon from './Icon'
 import type { IconName } from '@/types/ui'
 
@@ -6,10 +6,10 @@ type Variant = 'primary' | 'outline' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg' | 'xl'
 
 const VARIANTS: Record<Variant, string> = {
-    primary: 'bg-kick-green text-kick-black hover:bg-kick-green-dark shadow-green-sm hover:shadow-green-md active:scale-95',
+    primary: 'bg-kick-green text-kick-black hover:bg-kick-green-dark shadow-green-sm hover:shadow-green-md',
     outline: 'border border-kick-green/40 text-kick-green hover:border-kick-green hover:bg-kick-green/10',
     ghost: 'text-kick-muted hover:text-kick-white hover:bg-kick-surface',
-    danger: 'bg-red-600 text-white hover:bg-red-700 active:scale-95',
+    danger: 'bg-red-600 text-white hover:bg-red-700',
 }
 
 const SIZES: Record<Size, string> = {
@@ -19,12 +19,14 @@ const SIZES: Record<Size, string> = {
     xl: 'px-8 py-4   text-lg gap-3',
 }
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<"button">, "disabled"> {
     variant?: Variant
     size?: Size
     icon?: IconName
     iconRight?: IconName
     loading?: boolean
+    disabled?: boolean
+    children?: React.ReactNode
 }
 
 export default function Button({
@@ -41,10 +43,13 @@ export default function Button({
     const isDisabled = disabled || loading
 
     return (
-        <button
+        <motion.button
+            whileHover={!isDisabled ? { scale: 1.02 } : {}}
+            whileTap={!isDisabled ? { scale: 0.95 } : {}}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
             className={[
                 'inline-flex items-center justify-center font-semibold rounded-lg',
-                'transition-all duration-150 select-none',
+                'select-none',
                 VARIANTS[variant],
                 SIZES[size],
                 isDisabled ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer',
@@ -60,6 +65,6 @@ export default function Button({
                     : null}
             {children}
             {iconRight && !loading && <Icon name={iconRight} className="w-4 h-4 shrink-0" />}
-        </button>
+        </motion.button>
     )
 }

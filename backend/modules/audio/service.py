@@ -104,8 +104,13 @@ def run_denoise_pipeline(job_id: str, src_path: str, ext: str, mode: str, out_na
 
         update_job(job_id, progress=85)
         _export_mp3(final, out_mp3)
-        update_job(job_id, status="done", progress=100, result_path=out_mp3)
-        log.info("Job %s done → %s", job_id, out_mp3)
+        
+        from core.storage import upload_to_cloud
+        # resource_type "video" is used for audio files in Cloudinary
+        final_url = upload_to_cloud(job_id, out_mp3, resource_type="video")
+        
+        update_job(job_id, status="done", progress=100, result_path=final_url)
+        log.info("Job %s done → %s", job_id, final_url)
 
     except Exception as e:
         log.exception("Job %s failed", job_id)

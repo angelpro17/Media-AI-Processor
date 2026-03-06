@@ -17,3 +17,6 @@ pikepdf
 transformers
 sentencepiece
 sacremoses
+# Database & Cloud
+supabase
+cloudinary

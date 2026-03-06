@@ -138,7 +138,7 @@ export default function TranslatePage() {
             </div>
 
             {tab === 'text' && (
-                <div className="flex flex-col gap-6 animate-fade-up">
+                <div className="flex flex-col gap-6">
                     <Card>
                         <CardHeader title={`Texto en ${dir.from}`} icon={<Icon name="translate" className="w-5 h-5 text-kick-green" />} />
                         <textarea
@@ -182,7 +182,7 @@ export default function TranslatePage() {
             )}
 
             {tab === 'document' && (
-                <div className="flex flex-col gap-6 animate-fade-up">
+                <div className="flex flex-col gap-6">
                     <Card>
                         <CardHeader
                             title="Sube el archivo a traducir"
