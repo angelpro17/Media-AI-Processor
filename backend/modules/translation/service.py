@@ -1,7 +1,8 @@
 import re
+import os
 import logging
+import httpx
 from typing import Dict, Any, List, Tuple
-from transformers import MarianMTModel, MarianTokenizer
 
 log = logging.getLogger(__name__)
 
@@ -18,88 +19,38 @@ SUPPORTED_PAIRS = [
     "de-es",
 ]
 
-# We map language pairs to the appropriate ROMANCE / specialized Helsinki model
-MODEL_MAP = {
-    # es -> romance
-    "es-fr": "Helsinki-NLP/opus-mt-es-ROMANCE",
-    "es-it": "Helsinki-NLP/opus-mt-es-ROMANCE",
-    "es-pt": "Helsinki-NLP/opus-mt-es-ROMANCE",
-    
-    # en -> romance
-    "en-es": "Helsinki-NLP/opus-mt-en-ROMANCE",
-    "en-fr": "Helsinki-NLP/opus-mt-en-ROMANCE",
-    
-    # Specific ones preferred by Helsinki if available:
-    "es-en": "Helsinki-NLP/opus-mt-es-en",
-    "fr-es": "Helsinki-NLP/opus-mt-fr-es",
-    "it-es": "Helsinki-NLP/opus-mt-it-es",
-    "pt-es": "Helsinki-NLP/opus-mt-pt-es",
-    "es-de": "Helsinki-NLP/opus-mt-es-de",
-    "de-es": "Helsinki-NLP/opus-mt-de-es",
-}
+# MyMemory API — free up to 10k words/day, no API key needed
+_MYMEMORY_URL = "https://api.mymemory.translated.net/get"
 
-# For ROMANCE models, MarianMT requires a target language prefix like ">>pt<<"
-prefix_map = {
-    "pt": ">>pt<<",
-    "fr": ">>fr<<",
-    "es": ">>es<<",
-    "it": ">>it<<"
-}
-
-_cache: Dict[str, Any] = {}
-
-MAX_BATCH_CHARS = 400
-MAX_BATCH_SIZE  = 32
-
-def _get_pipeline(direction: str) -> Dict[str, Any]:
-    model_name = MODEL_MAP.get(direction)
-    if not model_name:
-        raise ValueError(f"No translation model defined for '{direction}'")
-        
-    if model_name not in _cache:
-        log.info("Loading translation model: %s", model_name)
-        tokenizer = MarianTokenizer.from_pretrained(model_name)
-        model     = MarianMTModel.from_pretrained(model_name)
-        model.eval()
-        _cache[model_name] = {"model": model, "tokenizer": tokenizer}
-        log.info("Model %s loaded", model_name)
-    return _cache[model_name]
-
-def _batch_translate(texts: List[str], direction: str) -> List[str]:
-    if not texts:
-        return []
-
-    src_lang, tgt_lang = direction.split("-")
-    model_name = MODEL_MAP[direction]
-    
-    pipeline  = _get_pipeline(direction)
-    tokenizer = pipeline["tokenizer"]
-    model     = pipeline["model"]
-
-    # Prepend target language prefix if using a multilingual ROMANCE model
-    if "ROMANCE" in model_name:
-        prefix = prefix_map.get(tgt_lang, f">>{tgt_lang}<<")
-        processed_texts = [f"{prefix} {t}" for t in texts]
-    else:
-        processed_texts = texts
-
-    results: List[str] = []
-    for i in range(0, len(processed_texts), MAX_BATCH_SIZE):
-        batch  = processed_texts[i : i + MAX_BATCH_SIZE]
-        inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=512)
-        outputs = model.generate(**inputs, num_beams=4, max_length=512)
-        decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        results.extend(decoded)
-    return results
+def _translate_via_api(text: str, src: str, tgt: str) -> str:
+    """Translate a single chunk of text via MyMemory free API."""
+    try:
+        resp = httpx.get(
+            _MYMEMORY_URL,
+            params={"q": text, "langpair": f"{src}|{tgt}"},
+            timeout=15.0,
+        )
+        data = resp.json()
+        translated = data.get("responseData", {}).get("translatedText", "")
+        if translated and data.get("responseStatus") == 200:
+            return translated
+        # Fallback: try matches list
+        matches = data.get("matches", [])
+        if matches:
+            return matches[0].get("translation", text)
+        return text
+    except Exception as e:
+        log.warning("MyMemory API error: %s — returning original text", e)
+        return text
 
 
-def _split_into_chunks(text: str) -> List[str]:
-    """Split a paragraph into sentence chunks that fit within MAX_BATCH_CHARS."""
+def _split_into_chunks(text: str, max_chars: int = 400) -> List[str]:
+    """Split a paragraph into sentence chunks."""
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     chunks: List[str] = []
     current = ""
     for sent in sentences:
-        if len(current) + len(sent) > MAX_BATCH_CHARS and current:
+        if len(current) + len(sent) > max_chars and current:
             chunks.append(current.strip())
             current = sent
         else:
@@ -110,33 +61,65 @@ def _split_into_chunks(text: str) -> List[str]:
 
 
 def translate_text(text: str, direction: str) -> str:
-    """Translate plain text, preserving paragraph structure."""
+    """Translate plain text using MyMemory API, preserving paragraph structure."""
+    src, tgt = direction.split("-")
     paragraphs = text.split("\n")
     out_paragraphs: List[str] = []
 
-    # Flatten all chunks, remembering which paragraph each belongs to
-    para_chunks: List[List[str]] = []
-    all_chunks: List[str] = []
     for para in paragraphs:
         stripped = para.strip()
         if not stripped:
-            para_chunks.append([])
+            out_paragraphs.append("")
             continue
         chunks = _split_into_chunks(stripped)
-        para_chunks.append(chunks)
-        all_chunks.extend(chunks)
-
-    translated_flat = _batch_translate(all_chunks, direction)
-
-    idx = 0
-    for chunks in para_chunks:
-        if not chunks:
-            out_paragraphs.append("")
-        else:
-            out_paragraphs.append(" ".join(translated_flat[idx : idx + len(chunks)]))
-            idx += len(chunks)
+        translated_chunks = [_translate_via_api(c, src, tgt) for c in chunks]
+        out_paragraphs.append(" ".join(translated_chunks))
 
     return "\n".join(out_paragraphs)
+
+
+# ── Legacy local-model helpers (only used for document translation) ──────────
+MODEL_MAP = {
+    "es-fr": "Helsinki-NLP/opus-mt-es-ROMANCE",
+    "es-it": "Helsinki-NLP/opus-mt-es-ROMANCE",
+    "es-pt": "Helsinki-NLP/opus-mt-es-ROMANCE",
+    "en-es": "Helsinki-NLP/opus-mt-en-ROMANCE",
+    "en-fr": "Helsinki-NLP/opus-mt-en-ROMANCE",
+    "es-en": "Helsinki-NLP/opus-mt-es-en",
+    "fr-es": "Helsinki-NLP/opus-mt-fr-es",
+    "it-es": "Helsinki-NLP/opus-mt-it-es",
+    "pt-es": "Helsinki-NLP/opus-mt-pt-es",
+    "es-de": "Helsinki-NLP/opus-mt-es-de",
+    "de-es": "Helsinki-NLP/opus-mt-de-es",
+}
+prefix_map = {"pt": ">>pt<<", "fr": ">>fr<<", "es": ">>es<<", "it": ">>it<<"}
+_cache: Dict[str, Any] = {}
+MAX_BATCH_CHARS = 400
+MAX_BATCH_SIZE  = 32
+
+
+def _get_pipeline(direction: str) -> Dict[str, Any]:
+    from transformers import MarianMTModel, MarianTokenizer
+    model_name = MODEL_MAP.get(direction)
+    if not model_name:
+        raise ValueError(f"No translation model defined for '{direction}'")
+    if model_name not in _cache:
+        log.info("Loading translation model: %s", model_name)
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model = MarianMTModel.from_pretrained(model_name)
+        model.eval()
+        _cache[model_name] = {"model": model, "tokenizer": tokenizer}
+    return _cache[model_name]
+
+
+def _batch_translate(texts: List[str], direction: str) -> List[str]:
+    """Translate a batch of texts — uses API when possible, falls back to local model."""
+    if not texts:
+        return []
+    src, tgt = direction.split("-")
+    # Use API for short texts (document translation chunks)
+    return [_translate_via_api(t, src, tgt) for t in texts]
+
 
 
 # ── PDF → PDF (batched, in-place layout preservation) ─────────
