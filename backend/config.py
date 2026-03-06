@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # CORS
-    allowed_origins: List[str] = ["*"]
+    allowed_origins: List[str] = ["*"]  # Public API — allow all origins
 
     # Server
     host: str = "0.0.0.0"
