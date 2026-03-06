@@ -4,13 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # CORS
-    allowed_origins: List[str] = [
-        "http://localhost:5173",   # Vite dev server
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://media-ai-processor.onrender.com",
-    ]
+    allowed_origins: List[str] = ["*"]  # Public API — allow all origins
 
     # Server
     host: str = "0.0.0.0"
