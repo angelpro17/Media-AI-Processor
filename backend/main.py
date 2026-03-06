@@ -90,7 +90,15 @@ def download_job(job_id: str):
         raise HTTPException(status_code=400, detail="Job not ready yet")
 
     path = job.get("result_path")
-    if not path or not os.path.exists(path):
+    if not path:
+        raise HTTPException(status_code=410, detail="Result file no longer available")
+
+    # If the path is a Cloudinary URL, we can redirect directly
+    if path.startswith("http"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=path)
+
+    if not os.path.exists(path):
         raise HTTPException(status_code=410, detail="Result file no longer available")
 
     return FileResponse(

@@ -38,7 +38,7 @@ export default function VideoPage() {
     const isProcessing = job.status === 'pending' || job.status === 'processing'
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-up">
+        <div className="flex flex-col gap-6">
             <Helmet>
                 <title>Extraer Audio de Video — Media-AI-Processor</title>
                 <meta name="description" content="Extrae el audio (MP3) de tus videos MP4, AVI, MOV o MKV offline al instante. Conversor de video a audio gratis sin límites de tamaño." />

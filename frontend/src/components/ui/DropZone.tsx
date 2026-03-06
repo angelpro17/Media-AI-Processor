@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import Icon from './Icon'
 
 interface DropZoneProps {
@@ -65,7 +66,9 @@ export default function DropZone({
 
     return (
         <div>
-            <div
+            <motion.div
+                whileHover={!disabled ? { scale: 1.01 } : {}}
+                whileTap={!disabled ? { scale: 0.98 } : {}}
                 role="button"
                 tabIndex={0}
                 aria-label="Zona de arrastrar y soltar"
@@ -81,7 +84,7 @@ export default function DropZone({
                 className={[
                     'relative flex flex-col items-center justify-center gap-3',
                     'border-2 border-dashed rounded-xl p-10 cursor-pointer text-center',
-                    'transition-all duration-200',
+                    'transition-colors duration-200',
                     dragging ? 'border-kick-green bg-kick-green/10 shadow-green-sm' : 'border-kick-border hover:border-kick-green/50 hover:bg-kick-green/5',
                     disabled ? 'opacity-40 pointer-events-none' : '',
                 ].join(' ')}
@@ -108,13 +111,15 @@ export default function DropZone({
                     className="hidden"
                     onChange={e => handle(e.target.files)}
                 />
-            </div>
-            {error && (
-                <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
-                    <Icon name="alert" className="w-3.5 h-3.5" />
-                    {error}
-                </p>
-            )}
-        </div>
+            </motion.div>
+            {
+                error && (
+                    <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                        <Icon name="alert" className="w-3.5 h-3.5" />
+                        {error}
+                    </p>
+                )
+            }
+        </div >
     )
 }

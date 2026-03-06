@@ -53,7 +53,7 @@ export default function TranscriptionPage() {
     const isProcessing = job.status === 'pending' || job.status === 'processing'
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-up">
+        <div className="flex flex-col gap-6">
             <Helmet>
                 <title>Transcribir Audio y Video a Texto — Media-AI-Processor</title>
                 <meta name="description" content="Convierte voz, dictados, entrevistas y videos a texto o subtítulos (SRT, VTT) usando IA (Whisper) gratis y sin conexión a internet." />

@@ -16,3 +16,6 @@ python-docx
 transformers
 sentencepiece
 sacremoses
+# Database & Cloud
+supabase
+cloudinary

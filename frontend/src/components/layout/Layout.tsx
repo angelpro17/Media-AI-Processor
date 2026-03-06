@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Icon from '@/components/ui/Icon'
 import { WaveformIcon } from '@/assets/icons/icons'
 
 export default function Layout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const location = useLocation()
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-kick-black overflow-hidden relative">
@@ -44,9 +46,17 @@ export default function Layout() {
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto w-full relative">
-                <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 w-full pb-20 md:pb-8">
-                    <Outlet />
-                </div>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } }}
+                        exit={{ opacity: 0, y: -20, transition: { duration: 0.2, ease: 'easeIn' } }}
+                        className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 w-full pb-20 md:pb-8"
+                    >
+                        <Outlet />
+                    </motion.div>
+                </AnimatePresence>
             </main>
         </div>
     )

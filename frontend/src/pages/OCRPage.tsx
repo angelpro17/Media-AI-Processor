@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Card, { CardHeader } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -27,12 +27,6 @@ export default function OCRPage() {
         job.start(jobId)
     }
 
-    function handleDownload(): void {
-        const a = document.createElement('a')
-        a.href = job.downloadUrl!
-        a.download = job.filename!
-        a.click()
-    }
 
     function handleReset(): void {
         setFile(null)
@@ -44,7 +38,7 @@ export default function OCRPage() {
     const isProcessing = job.status === 'pending' || job.status === 'processing'
 
     return (
-        <div className="flex flex-col gap-6 animate-fade-up">
+        <div className="flex flex-col gap-6">
             <Helmet>
                 <title>Extraer Texto de Imágenes (OCR) — Media-AI-Processor</title>
                 <meta name="description" content="Usa Inteligencia Artificial para sacar el texto de cualquier imagen, foto o captura de pantalla gratis y sin internet." />
@@ -119,18 +113,63 @@ export default function OCRPage() {
             )}
 
             {job.status === 'done' && (
-                <Card glow>
-                    <CardHeader
-                        title="Texto extraído detectado"
-                        subtitle="El texto se ha extraído exitosamente."
-                        icon={<Icon name="check" className="w-5 h-5 text-kick-green" />}
-                    />
-                    <div className="flex gap-3 mt-4">
-                        <Button size="lg" icon="download" onClick={handleDownload} className="flex-1">Descargar TXT</Button>
-                        <Button variant="outline" size="lg" onClick={handleReset}>Escanear otra imagen</Button>
-                    </div>
-                </Card>
+                <OcrResult downloadUrl={job.downloadUrl!} filename={job.filename!} onReset={handleReset} />
             )}
         </div>
+    )
+}
+
+// ─── Subcomponent that fetches & shows the text inline ────────────────────────
+import api from '@/services/api'
+
+function OcrResult({ downloadUrl, filename, onReset }: { downloadUrl: string; filename: string; onReset: () => void }) {
+    const [text, setT] = useState<string | null>(null)
+    const [copied, setCopied] = useState(false)
+
+    useEffect(() => {
+        api.get(downloadUrl.replace('/api', ''), { responseType: 'text' })
+            .then(r => setT(r.data as string))
+            .catch(() => setT(null))
+    }, [downloadUrl])
+
+    function copy() {
+        if (!text) return
+        navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
+
+    function handleDownload() {
+        const a = document.createElement('a')
+        a.href = downloadUrl
+        a.download = filename
+        a.click()
+    }
+
+    return (
+        <Card glow>
+            <CardHeader
+                title="Texto extraído"
+                subtitle={text ? `${text.split('\n').filter(Boolean).length} líneas detectadas` : 'Cargando...'}
+                icon={<Icon name="check" className="w-5 h-5 text-kick-green" />}
+            />
+            {text && (
+                <div className="mt-4 relative">
+                    <pre className="whitespace-pre-wrap font-sans text-sm text-kick-white bg-kick-dark rounded-xl p-4 border border-kick-border max-h-80 overflow-y-auto leading-relaxed">
+                        {text}
+                    </pre>
+                    <button
+                        onClick={copy}
+                        className="absolute top-3 right-3 text-xs text-kick-muted hover:text-kick-green transition-colors bg-kick-dark px-2 py-1 rounded border border-kick-border"
+                    >
+                        {copied ? '✓ Copiado' : 'Copiar'}
+                    </button>
+                </div>
+            )}
+            <div className="flex gap-3 mt-4">
+                <Button size="lg" icon="download" onClick={handleDownload} className="flex-1">Descargar TXT</Button>
+                <Button variant="outline" size="lg" onClick={onReset}>Escanear otra imagen</Button>
+            </div>
+        </Card>
     )
 }

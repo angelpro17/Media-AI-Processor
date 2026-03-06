@@ -4,7 +4,7 @@ from core.jobs import create_job
 import tempfile
 import os
 
-router = APIRouter(prefix="/ocr", tags=["OCR"])
+router = APIRouter(tags=["OCR"])
 
 SUPPORTED_EXTS = {"png", "jpg", "jpeg", "webp"}
 MAX_MB = 10

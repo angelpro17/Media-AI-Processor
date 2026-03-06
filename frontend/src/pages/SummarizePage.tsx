@@ -92,7 +92,7 @@ export default function SummarizePage() {
             </div>
 
             {tab === 'text' && (
-                <div className="grid lg:grid-cols-2 gap-6 animate-fade-up">
+                <div className="grid lg:grid-cols-2 gap-6">
                     <Card>
                         <CardHeader
                             title="Texto original"
@@ -141,7 +141,7 @@ export default function SummarizePage() {
             )}
 
             {tab === 'document' && (
-                <div className="flex flex-col gap-6 animate-fade-up mx-auto max-w-2xl">
+                <div className="flex flex-col gap-6 mx-auto max-w-2xl">
                     <Card>
                         <CardHeader
                             title="Sube el documento a resumir"
