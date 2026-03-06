@@ -31,41 +31,40 @@ const FEATURES: Feature[] = [
 
 export default function HomePage() {
     return (
-        <div className="flex flex-col gap-12">
+        <div className="flex flex-col gap-10 sm:gap-12">
             <Helmet>
                 <title>Media-AI-Processor — Plataforma Todo-en-Uno de IA Local</title>
                 <meta name="description" content="Media-AI-Processor es tu suite offline de herramientas potenciadas por Inteligencia Artificial. Limpieza de audio, transcripción, traducción, OCR de imágenes a texto y resúmenes de documentos gratis y sin internet." />
                 <meta name="keywords" content="audioclean, limpiar audio con ia, transcribir audio a texto gratis, traducir documentos pdf, extraer texto de imagenes ocr, resumir texto largo, ia local, offline" />
             </Helmet>
-            <div className="pt-4">
-
-                <h1 className="text-4xl font-black text-kick-white leading-tight mb-3">
+            <div className="pt-2 sm:pt-4">
+                <h1 className="text-3xl sm:text-4xl font-black text-kick-white leading-tight mb-3">
                     Plataforma AI de<br />
                     <span className="text-kick-green">Productividad</span>
                 </h1>
-                <p className="text-kick-muted text-lg max-w-xl leading-relaxed">
+                <p className="text-kick-muted text-base sm:text-lg max-w-xl leading-relaxed">
                     Audio, documentos y traducción — procesado localmente con modelos de inteligencia artificial de última generación. Sin costos ocultos.
                 </p>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:gap-4">
                 {FEATURES.map(f => (
                     <Link
                         key={f.path}
                         to={f.path}
-                        className="group block bg-kick-surface border border-kick-border rounded-xl p-6 hover:border-kick-green/40 hover:shadow-green-sm transition-all duration-200"
+                        className="group block bg-kick-surface border border-kick-border rounded-xl p-4 sm:p-6 hover:border-kick-green/40 hover:shadow-green-sm transition-all duration-200"
                     >
-                        <div className="flex items-start gap-5">
-                            <div className="p-3 rounded-xl bg-kick-dark border border-kick-border group-hover:border-kick-green/30 group-hover:bg-kick-green/10 transition-all duration-200 shrink-0">
-                                <Icon name={f.icon} className="w-6 h-6 text-kick-green" />
+                        <div className="flex items-start gap-4 sm:gap-5">
+                            <div className="p-2.5 sm:p-3 rounded-xl bg-kick-dark border border-kick-border group-hover:border-kick-green/30 group-hover:bg-kick-green/10 transition-all duration-200 shrink-0">
+                                <Icon name={f.icon} className="w-5 h-5 sm:w-6 sm:h-6 text-kick-green" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h2 className="text-base font-bold text-kick-white">{f.title}</h2>
-                                    <span className="px-2 py-0.5 rounded text-xs font-mono bg-kick-green/10 border border-kick-green/20 text-kick-green">{f.badge}</span>
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <h2 className="text-sm sm:text-base font-bold text-kick-white">{f.title}</h2>
+                                    <span className="px-2 py-0.5 rounded text-xs font-mono bg-kick-green/10 border border-kick-green/20 text-kick-green whitespace-nowrap">{f.badge}</span>
                                 </div>
-                                <p className="text-sm text-kick-muted leading-relaxed mb-4">{f.desc}</p>
-                                <div className="flex gap-6">
+                                <p className="text-xs sm:text-sm text-kick-muted leading-relaxed mb-3 sm:mb-4">{f.desc}</p>
+                                <div className="flex flex-wrap gap-4 sm:gap-6">
                                     {f.stats.map(s => (
                                         <div key={s.label}>
                                             <p className="text-xs text-kick-muted">{s.label}</p>
@@ -74,13 +73,11 @@ export default function HomePage() {
                                     ))}
                                 </div>
                             </div>
-                            <Icon name="chevronRight" className="w-5 h-5 text-kick-muted group-hover:text-kick-green transition-colors duration-200 shrink-0 mt-0.5" />
+                            <Icon name="chevronRight" className="w-4 h-4 sm:w-5 sm:h-5 text-kick-muted group-hover:text-kick-green transition-colors duration-200 shrink-0 mt-0.5" />
                         </div>
                     </Link>
                 ))}
             </div>
-
-
         </div>
     )
 }
