@@ -13,19 +13,21 @@ log = logging.getLogger(__name__)
 
 TEMP_DIR = tempfile.gettempdir()
 
-# ── Lazy-load DeepFilterNet ───────────────────────────────────
-_df_model = None
-_df_state = None
+import os
+import tempfile
+import logging
 
+import numpy as np
+import librosa
+import soundfile as sf
+from pydub import AudioSegment
 
-def get_deepfilter():
-    global _df_model, _df_state
-    if _df_model is None:
-        log.info("Loading DeepFilterNet3…")
-        from df.enhance import init_df
-        _df_model, _df_state, _ = init_df()
-        log.info("DeepFilterNet3 ready")
-    return _df_model, _df_state
+from core.jobs import update_job
+from core.storage import upload_to_cloud
+
+log = logging.getLogger(__name__)
+
+TEMP_DIR = tempfile.gettempdir()
 
 
 # ── Pipeline steps ────────────────────────────────────────────
@@ -39,24 +41,18 @@ def _to_wav(src: str) -> str:
     return dst
 
 
-def _deepfilter(wav_in: str, uid: str) -> str:
-    from df.enhance import enhance, load_audio, save_audio
-    model, state = get_deepfilter()
-    audio, _ = load_audio(wav_in, sr=state.sr())
-    enhanced  = enhance(model, state, audio)
-    out = os.path.join(TEMP_DIR, f"{uid}_df.wav")
-    save_audio(out, enhanced, state.sr())
-    return out
-
-
-def _noisereduce_pass(wav_in: str, uid: str) -> str:
+def _noisereduce_pass(wav_in: str, uid: str, mode: str) -> str:
     import noisereduce as nr
     y, sr = librosa.load(wav_in, sr=None, mono=False)
+    
+    # Premium gets a stronger noise reduction profile
+    prop_decrease = 0.95 if mode == "premium" else 0.75
+    
     if y.ndim == 1:
-        y_clean = nr.reduce_noise(y=y, sr=sr, stationary=False, prop_decrease=0.7)
+        y_clean = nr.reduce_noise(y=y, sr=sr, stationary=False, prop_decrease=prop_decrease)
     else:
         y_clean = np.stack(
-            [nr.reduce_noise(y=y[i], sr=sr, stationary=False, prop_decrease=0.7) for i in range(y.shape[0])],
+            [nr.reduce_noise(y=y[i], sr=sr, stationary=False, prop_decrease=prop_decrease) for i in range(y.shape[0])],
             axis=0,
         )
     out = os.path.join(TEMP_DIR, f"{uid}_nr.wav")
@@ -82,30 +78,21 @@ def _cleanup(*paths):
 # ── Main background task ──────────────────────────────────────
 def run_denoise_pipeline(job_id: str, src_path: str, ext: str, mode: str, out_name: str):
     uid = job_id
-    wav_path = df_wav = nr_wav = None
+    wav_path = nr_wav = None
     out_mp3  = os.path.join(TEMP_DIR, f"{uid}_clean.mp3")
 
     try:
-        update_job(job_id, status="processing", progress=5)
+        update_job(job_id, status="processing", progress=10)
 
         wav_path = _to_wav(src_path)
-        update_job(job_id, progress=20)
+        update_job(job_id, progress=30)
 
-        df_wav   = _deepfilter(wav_path, uid)
-        update_job(job_id, progress=65)
+        nr_wav = _noisereduce_pass(wav_path, uid, mode)
+        update_job(job_id, progress=75)
 
-        final = df_wav
-        if mode == "premium":
-            try:
-                nr_wav = _noisereduce_pass(df_wav, uid)
-                final  = nr_wav
-            except Exception as e:
-                log.warning("noisereduce second pass failed: %s", e)
-
+        _export_mp3(nr_wav, out_mp3)
         update_job(job_id, progress=85)
-        _export_mp3(final, out_mp3)
         
-        from core.storage import upload_to_cloud
         # resource_type "video" is used for audio files in Cloudinary
         final_url = upload_to_cloud(job_id, out_mp3, resource_type="video")
         
@@ -116,6 +103,7 @@ def run_denoise_pipeline(job_id: str, src_path: str, ext: str, mode: str, out_na
         log.exception("Job %s failed", job_id)
         update_job(job_id, status="error", error=str(e))
     finally:
-        _cleanup(src_path, df_wav, nr_wav)
+        _cleanup(src_path, nr_wav, out_mp3)
         if wav_path and wav_path != src_path:
             _cleanup(wav_path)
+

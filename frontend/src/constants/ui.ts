@@ -12,5 +12,5 @@ export const NAV_ITEMS: NavItem[] = [
     { path: '/summarize', label: 'Resumen AI', icon: 'list' },
 ]
 
-export const POLL_INTERVAL_MS = 1500
-export const MAX_POLL_RETRIES = 240
+export const POLL_INTERVAL_MS = 800
+export const MAX_POLL_RETRIES = 450

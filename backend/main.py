@@ -1,3 +1,11 @@
+import ssl
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
 import os
 import uuid
 import asyncio
@@ -9,6 +17,7 @@ from typing import Optional
 from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config import settings
@@ -29,12 +38,25 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("AudioClean Pro starting up…")
-    # Pre-load audio model so first request is instant
-    try:
-        from modules.audio.service import get_deepfilter
-        get_deepfilter()
-    except Exception as e:
-        log.warning("Could not pre-load DeepFilterNet: %s", e)
+    
+    # Pre-load common translation models in the background so first translation is instant (if not on a low-RAM cloud like Render)
+    def preload_models():
+        if os.getenv("RENDER") or os.getenv("DISABLE_PRELOAD"):
+            log.info("Skipping model pre-loading on Render to conserve RAM.")
+            return
+        
+        try:
+            from modules.translation.service import _get_pipeline
+            log.info("Pre-loading translation models (en-es, es-en) to MPS/GPU...")
+            _get_pipeline("en-es")
+            _get_pipeline("es-en")
+            log.info("Translation models pre-loaded successfully. Ready for instant use.")
+        except Exception as e:
+            log.warning("Failed to pre-load translation models: %s", e)
+
+    import threading
+    threading.Thread(target=preload_models, daemon=True).start()
+    
     yield
     log.info("AudioClean Pro shutting down…")
 
@@ -46,6 +68,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# GZip compression for faster payloads
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # CORS — allow frontend dev server
 app.add_middleware(
     CORSMiddleware,
@@ -53,6 +78,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    max_age=86400, # Cache preflight requests for 24 hours
 )
 
 # API routes
@@ -109,3 +135,14 @@ def download_job(job_id: str):
         media_type=job.get("mime_type", "application/octet-stream"),
         background=BackgroundTasks(),
     )
+
+
+@app.delete("/api/jobs/{job_id}")
+def delete_job_route(job_id: str):
+    job = job_store.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    from core.jobs import delete_job
+    delete_job(job_id)
+    return {"status": "deleted", "job_id": job_id}

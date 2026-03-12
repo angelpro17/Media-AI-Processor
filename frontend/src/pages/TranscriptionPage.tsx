@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
 import ProgressBar, { WaveLoader } from '@/components/ui/ProgressBar'
 import Icon from '@/components/ui/Icon'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { submitTranscription } from '@/services/transcriptionService'
 import { useJobPoller } from '@/hooks/useJobPoller'
 
@@ -25,7 +26,8 @@ export default function TranscriptionPage() {
     const [file, setFile] = useState<File | null>(null)
     const [modelSize, setModelSize] = useState('base')
     const [format, setFormat] = useState('txt')
-    const job = useJobPoller()
+    const [showCancelModal, setShowCancelModal] = useState(false)
+    const job = useJobPoller('transcription_job')
 
     function handleFile(f: File): void {
         setFile(f)
@@ -35,7 +37,7 @@ export default function TranscriptionPage() {
     async function handleProcess(): Promise<void> {
         if (!file) return
         const jobId = await submitTranscription(file, modelSize, format)
-        job.start(jobId)
+        job.start(jobId, file.name)
     }
 
     function handleDownload(): void {
@@ -45,12 +47,22 @@ export default function TranscriptionPage() {
         a.click()
     }
 
-    function handleReset(): void {
+    function handleResetClick(): void {
+        if (job.status === 'pending' || job.status === 'processing') {
+            setShowCancelModal(true)
+        } else {
+            performReset()
+        }
+    }
+
+    function performReset(): void {
         setFile(null)
         job.reset()
+        setShowCancelModal(false)
     }
 
     const isProcessing = job.status === 'pending' || job.status === 'processing'
+    const isRestoredJob = !file && job.jobId !== null && job.status !== 'idle'
 
     return (
         <div className="flex flex-col gap-6">
@@ -59,6 +71,19 @@ export default function TranscriptionPage() {
                 <meta name="description" content="Convierte voz, dictados, entrevistas y videos a texto o subtítulos (SRT, VTT) usando IA (Whisper) gratis y sin conexión a internet." />
                 <meta name="keywords" content="transcribir audio a texto, video a texto, conversor audio a texto, crear subtitulos automáticos, whisper ia, offline" />
             </Helmet>
+
+            <ConfirmModal
+                isOpen={showCancelModal}
+                title="¿Cancelar procesamiento?"
+                message="El proceso se detendrá y perderás el progreso actual."
+                confirmText="Sí, cancelar"
+                onConfirm={() => {
+                    job.cancel()
+                    performReset()
+                }}
+                onCancel={() => setShowCancelModal(false)}
+            />
+
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Transcripción Inteligente</h1>
                 <p className="text-kick-muted text-sm">Convierte audio y video a texto o subtítulos usando OpenAI Whisper localmente.</p>
@@ -70,7 +95,7 @@ export default function TranscriptionPage() {
                     subtitle="MP3, WAV, M4A, MP4, MKV — máx. 100 MB"
                     icon={<Icon name="upload" className="w-5 h-5 text-kick-green" />}
                 />
-                {!file ? (
+                {!file && !isRestoredJob ? (
                     <DropZone accept=".mp3,.wav,.ogg,.flac,.m4a,.mp4,.mkv,.avi,.mov" onFile={handleFile} formats={['Audio', 'Video']} maxMB={100} />
                 ) : (
                     <div className="flex items-center gap-4 p-4 bg-kick-dark rounded-xl border border-kick-border">
@@ -78,10 +103,12 @@ export default function TranscriptionPage() {
                             <Icon name="mic" className="w-5 h-5 text-kick-green" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-kick-white truncate">{file.name}</p>
-                            <p className="text-xs text-kick-muted">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <p className="text-sm font-semibold text-kick-white truncate">{file ? file.name : (job.filename || 'Archivo en proceso')}</p>
+                            <p className="text-xs text-kick-muted">
+                                {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Recuperado de la sesión anterior'}
+                            </p>
                         </div>
-                        <Button variant="ghost" size="sm" icon="x" onClick={handleReset} />
+                        <Button variant="ghost" size="sm" icon="x" onClick={handleResetClick} />
                     </div>
                 )}
             </Card>
@@ -94,8 +121,8 @@ export default function TranscriptionPage() {
                             <button
                                 key={m.id}
                                 onClick={() => setModelSize(m.id)}
-                                className={`flex flex-col text-left p-3 rounded-xl border transition-all ${modelSize === m.id ? 'border-kick-green bg-kick-green/10 shadow-green-sm' : 'border-kick-border bg-kick-dark hover:border-kick-green/30'
-                                    }`}
+                                disabled={isProcessing}
+                                className={`flex flex-col text-left p-3 rounded-xl border transition-all ${modelSize === m.id ? 'border-kick-green bg-kick-green/10 shadow-green-sm' : 'border-kick-border bg-kick-dark hover:border-kick-green/30'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <span className={`text-sm font-bold ${modelSize === m.id ? 'text-kick-green' : 'text-kick-white'}`}>{m.label}</span>
                                 <span className="text-xs text-kick-muted mt-0.5">{m.desc}</span>
@@ -111,8 +138,8 @@ export default function TranscriptionPage() {
                             <button
                                 key={f.id}
                                 onClick={() => setFormat(f.id)}
-                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${format === f.id ? 'border-kick-green bg-kick-green/10 shadow-green-sm' : 'border-kick-border bg-kick-dark hover:border-kick-green/30'
-                                    }`}
+                                disabled={isProcessing}
+                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${format === f.id ? 'border-kick-green bg-kick-green/10 shadow-green-sm' : 'border-kick-border bg-kick-dark hover:border-kick-green/30'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <Icon name="check" className={`w-4 h-4 ${format === f.id ? 'text-kick-green' : 'opacity-0'}`} />
                                 <span className={`text-sm font-bold truncate ${format === f.id ? 'text-kick-green' : 'text-kick-white'}`}>{f.label}</span>
@@ -130,18 +157,24 @@ export default function TranscriptionPage() {
 
             {isProcessing && (
                 <Card>
-                    <WaveLoader label={job.status === 'pending' ? 'Preparando...' : 'Transcribiendo con OpenAI Whisper...'} />
+                    <div className="flex justify-between items-start mb-2">
+                        <WaveLoader label={job.status === 'pending' ? 'Preparando...' : 'Transcribiendo con OpenAI Whisper...'} />
+                        <Button variant="ghost" size="sm" icon="x" onClick={handleResetClick} className="text-kick-muted hover:text-red-400" />
+                    </div>
                     <ProgressBar value={job.progress} label="Progreso" className="mt-2" />
                 </Card>
             )}
 
             {job.status === 'error' && (
-                <div className="flex gap-3 p-4 rounded-xl bg-red-950/40 border border-red-800/50">
-                    <Icon name="alert" className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                    <div>
-                        <p className="text-sm font-semibold text-red-300">Error en la transcripción</p>
-                        <p className="text-xs text-red-400 mt-0.5">{job.error}</p>
+                <div className="flex justify-between items-center p-4 rounded-xl bg-red-950/40 border border-red-800/50">
+                    <div className="flex gap-3">
+                        <Icon name="alert" className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm font-semibold text-red-300">Error en la transcripción</p>
+                            <p className="text-xs text-red-400 mt-0.5">{job.error}</p>
+                        </div>
                     </div>
+                    <Button variant="ghost" size="sm" icon="x" onClick={performReset} />
                 </div>
             )}
 
@@ -154,7 +187,7 @@ export default function TranscriptionPage() {
                     />
                     <div className="flex gap-3 mt-4">
                         <Button size="lg" icon="download" onClick={handleDownload} className="flex-1">Descargar {format.toUpperCase()}</Button>
-                        <Button variant="outline" size="lg" onClick={handleReset}>Subir otro archivo</Button>
+                        <Button variant="outline" size="lg" onClick={performReset}>Subir otro archivo</Button>
                     </div>
                 </Card>
             )}

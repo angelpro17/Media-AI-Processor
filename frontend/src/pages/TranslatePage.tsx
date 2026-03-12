@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import DropZone from '@/components/ui/DropZone'
 import ProgressBar, { WaveLoader } from '@/components/ui/ProgressBar'
 import Icon from '@/components/ui/Icon'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { translate, translateDocument } from '@/services/translateService'
 import { useJobPoller } from '@/hooks/useJobPoller'
 import type { TranslationDirection, DirectionOption } from '@/types/translation'
@@ -25,14 +26,14 @@ const DIRECTIONS: DirectionOption[] = [
 const MAX_CHARS = 10_000
 
 const TABS = [
-    { id: 'text', label: 'Texto', icon: 'translate' as const },
     { id: 'document', label: 'Docs / Subs', icon: 'document' as const },
+    { id: 'text', label: 'Texto', icon: 'translate' as const },
 ]
 
 type TabId = 'text' | 'document'
 
 export default function TranslatePage() {
-    const [tab, setTab] = useState<TabId>('text')
+    const [tab, setTab] = useState<TabId>('document')
     const [direction, setDirection] = useState<TranslationDirection>('es-en')
     const [input, setInput] = useState('')
     const [output, setOutput] = useState('')
@@ -40,11 +41,13 @@ export default function TranslatePage() {
     const [textError, setTextError] = useState('')
     const [copied, setCopied] = useState(false)
     const [docFile, setDocFile] = useState<File | null>(null)
-    const docJob = useJobPoller()
+    const [showCancelModal, setShowCancelModal] = useState(false)
+    const docJob = useJobPoller('translate_job')
 
     const dir = DIRECTIONS.find(d => d.id === direction)!
     const charPct = (input.length / MAX_CHARS) * 100
     const docProcessing = docJob.status === 'pending' || docJob.status === 'processing'
+    const isRestoredJob = !docFile && docJob.jobId !== null && docJob.status !== 'idle'
 
     function handleDirectionChange(d: TranslationDirection): void {
         setDirection(d)
@@ -75,7 +78,7 @@ export default function TranslatePage() {
     async function handleTranslateDoc(): Promise<void> {
         if (!docFile) return
         const jobId = await translateDocument(docFile, direction)
-        docJob.start(jobId)
+        docJob.start(jobId, docFile.name)
     }
 
     function handleDocDownload(): void {
@@ -85,9 +88,18 @@ export default function TranslatePage() {
         a.click()
     }
 
-    function handleDocReset(): void {
+    function handleDocResetClick(): void {
+        if (docJob.status === 'pending' || docJob.status === 'processing') {
+            setShowCancelModal(true)
+        } else {
+            performDocReset()
+        }
+    }
+
+    function performDocReset(): void {
         setDocFile(null)
         docJob.reset()
+        setShowCancelModal(false)
     }
 
     return (
@@ -97,6 +109,19 @@ export default function TranslatePage() {
                 <meta name="description" content="Traductor offline gratuito de textos, PDFs, Word (DOCX) y subtítulos manteniendo el formato original mediante IA." />
                 <meta name="keywords" content="traductor ia, traducir pdf, traducir docx gratis, traductor de subtitulos, traductor de documentos offline" />
             </Helmet>
+
+            <ConfirmModal
+                isOpen={showCancelModal}
+                title="¿Cancelar traducción?"
+                message="El proceso se detendrá y perderás el progreso actual."
+                confirmText="Sí, cancelar"
+                onConfirm={() => {
+                    docJob.cancel()
+                    performDocReset()
+                }}
+                onCancel={() => setShowCancelModal(false)}
+            />
+
             <div>
                 <h1 className="text-2xl font-black text-kick-white mb-1">Traducción Automática</h1>
                 <p className="text-kick-muted text-sm">Traducción profesional mediante modelos de inteligencia artificial locales.</p>
@@ -189,7 +214,7 @@ export default function TranslatePage() {
                             subtitle={`Se traducirá a ${dir.to} preservando el formato · PDF, DOCX, TXT, SRT, VTT · máx. 20 MB`}
                             icon={<Icon name="document" className="w-5 h-5 text-kick-green" />}
                         />
-                        {!docFile ? (
+                        {!docFile && !isRestoredJob ? (
                             <DropZone
                                 accept=".pdf,.docx,.doc,.txt,.srt,.vtt"
                                 onFile={f => { setDocFile(f); docJob.reset() }}
@@ -203,12 +228,12 @@ export default function TranslatePage() {
                                     <Icon name="document" className="w-5 h-5 text-kick-green" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-kick-white truncate">{docFile.name}</p>
-                                    <p className="text-xs text-kick-muted">{(docFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                    <p className="text-sm font-semibold text-kick-white truncate">{docFile ? docFile.name : (docJob.filename || 'Archivo en proceso')}</p>
+                                    <p className="text-xs text-kick-muted">
+                                        {docFile ? `${(docFile.size / 1024 / 1024).toFixed(2)} MB` : 'Recuperado de la sesión anterior'}
+                                    </p>
                                 </div>
-                                {!docProcessing && docJob.status !== 'done' && (
-                                    <Button variant="ghost" size="sm" icon="x" onClick={handleDocReset} />
-                                )}
+                                <Button variant="ghost" size="sm" icon="x" onClick={handleDocResetClick} />
                             </div>
                         )}
                     </Card>
@@ -221,18 +246,24 @@ export default function TranslatePage() {
 
                     {docProcessing && (
                         <Card>
-                            <WaveLoader label="Traduciendo documento… (puede tardar unos minutos)" />
+                            <div className="flex justify-between items-start mb-2">
+                                <WaveLoader label="Traduciendo documento… (puede tardar unos minutos)" />
+                                <Button variant="ghost" size="sm" icon="x" onClick={handleDocResetClick} className="text-kick-muted hover:text-red-400" />
+                            </div>
                             <ProgressBar value={docJob.progress} label="Progreso" className="mt-2" />
                         </Card>
                     )}
 
                     {docJob.status === 'error' && (
-                        <div className="flex gap-3 p-4 rounded-xl bg-red-950/40 border border-red-800/50">
-                            <Icon name="alert" className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-semibold text-red-300">Error en la traducción</p>
-                                <p className="text-xs text-red-400 mt-0.5">{docJob.error}</p>
+                        <div className="flex justify-between items-center p-4 rounded-xl bg-red-950/40 border border-red-800/50">
+                            <div className="flex gap-3">
+                                <Icon name="alert" className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-semibold text-red-300">Error en la traducción</p>
+                                    <p className="text-xs text-red-400 mt-0.5">{docJob.error}</p>
+                                </div>
                             </div>
+                            <Button variant="ghost" size="sm" icon="x" onClick={performDocReset} />
                         </div>
                     )}
 
@@ -243,11 +274,11 @@ export default function TranslatePage() {
                                 subtitle={`Traducido a ${dir.to} preservando el formato original.`}
                                 icon={<Icon name="check" className="w-5 h-5 text-kick-green" />}
                             />
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 mt-4">
                                 <Button size="lg" icon="download" onClick={handleDocDownload} className="flex-1">
                                     Descargar {docJob.filename}
                                 </Button>
-                                <Button variant="outline" size="lg" onClick={handleDocReset}>Nueva traducción</Button>
+                                <Button variant="outline" size="lg" onClick={performDocReset}>Nueva traducción</Button>
                             </div>
                         </Card>
                     )}

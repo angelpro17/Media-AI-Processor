@@ -58,11 +58,19 @@ def _get_pipeline(direction: str) -> Dict[str, Any]:
         
     if model_name not in _cache:
         log.info("Loading translation model: %s", model_name)
+        
+        import torch
+        device = "cpu"
+        if torch.backends.mps.is_available():
+            device = "mps"
+        elif torch.cuda.is_available():
+            device = "cuda"
+            
         tokenizer = MarianTokenizer.from_pretrained(model_name)
-        model     = MarianMTModel.from_pretrained(model_name)
+        model     = MarianMTModel.from_pretrained(model_name).to(device)
         model.eval()
-        _cache[model_name] = {"model": model, "tokenizer": tokenizer}
-        log.info("Model %s loaded", model_name)
+        _cache[model_name] = {"model": model, "tokenizer": tokenizer, "device": device}
+        log.info("Model %s loaded on device: %s", model_name, device)
     return _cache[model_name]
 
 def _batch_translate(texts: List[str], direction: str) -> List[str]:
@@ -76,6 +84,8 @@ def _batch_translate(texts: List[str], direction: str) -> List[str]:
     tokenizer = pipeline["tokenizer"]
     model     = pipeline["model"]
 
+    device = pipeline["device"]
+
     # Prepend target language prefix if using a multilingual ROMANCE model
     if "ROMANCE" in model_name:
         prefix = prefix_map.get(tgt_lang, f">>{tgt_lang}<<")
@@ -87,6 +97,7 @@ def _batch_translate(texts: List[str], direction: str) -> List[str]:
     for i in range(0, len(processed_texts), MAX_BATCH_SIZE):
         batch  = processed_texts[i : i + MAX_BATCH_SIZE]
         inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         outputs = model.generate(**inputs, num_beams=4, max_length=512)
         decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
         results.extend(decoded)

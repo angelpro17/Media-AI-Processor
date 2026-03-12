@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Icon from '@/components/ui/Icon'
@@ -13,12 +13,12 @@ export default function Layout() {
         <div className="flex flex-col md:flex-row h-screen bg-kick-black overflow-hidden relative">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-kick-border bg-kick-dark sticky top-0 z-30">
-                <div className="flex items-center gap-2">
+                <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="p-1.5 rounded-lg bg-kick-green/10 border border-kick-green/30">
                         <WaveformIcon className="w-4 h-4 text-kick-green" />
                     </div>
                     <span className="font-bold text-kick-white text-sm tracking-wide">Media-AI-Processor</span>
-                </div>
+                </Link>
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
                     className="p-1.5 text-kick-muted hover:text-kick-white active:bg-kick-surface rounded-lg transition-colors border border-transparent hover:border-kick-border"
