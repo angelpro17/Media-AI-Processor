@@ -43,6 +43,77 @@ def _translate_via_api(text: str, src: str, tgt: str) -> str:
         log.warning("MyMemory API error: %s — returning original text", e)
         return text
 
+# For ROMANCE models, MarianMT requires a target language prefix like ">>pt<<"
+prefix_map = {
+    "pt": ">>pt<<",
+    "fr": ">>fr<<",
+    "es": ">>es<<",
+    "it": ">>it<<"
+}
+
+_cache: Dict[str, Any] = {}
+
+MAX_BATCH_CHARS = 400
+MAX_BATCH_SIZE  = 32
+
+def _get_pipeline(direction: str) -> Dict[str, Any]:
+    from transformers import MarianMTModel, MarianTokenizer
+    model_name = MODEL_MAP.get(direction)
+    if not model_name:
+        raise ValueError(f"No translation model defined for '{direction}'")
+        
+    if model_name not in _cache:
+        log.info("Loading translation model: %s", model_name)
+        
+        import torch
+        device = "cpu"
+        if torch.backends.mps.is_available():
+            device = "mps"
+        elif torch.cuda.is_available():
+            device = "cuda"
+            
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model     = MarianMTModel.from_pretrained(model_name).to(device)
+        model.eval()
+        _cache[model_name] = {"model": model, "tokenizer": tokenizer, "device": device}
+        log.info("Model %s loaded on device: %s", model_name, device)
+    return _cache[model_name]
+
+def _batch_translate(texts: List[str], direction: str) -> List[str]:
+    """Translate a batch of texts — uses API when on Render, falls back to fast local model."""
+    if not texts:
+        return []
+
+    src_lang, tgt_lang = direction.split("-")
+    
+    # If running on Render (Low RAM/CPU server), default to API to prevent heavy CPU loads
+    if os.getenv("RENDER"):
+        return [_translate_via_api(t, src_lang, tgt_lang) for t in texts]
+
+    # Offline/Local GPU mode
+    model_name = MODEL_MAP[direction]
+    pipeline  = _get_pipeline(direction)
+    tokenizer = pipeline["tokenizer"]
+    model     = pipeline["model"]
+    device = pipeline["device"]
+
+    # Prepend target language prefix if using a multilingual ROMANCE model
+    if "ROMANCE" in model_name:
+        prefix = prefix_map.get(tgt_lang, f">>{tgt_lang}<<")
+        processed_texts = [f"{prefix} {t}" for t in texts]
+    else:
+        processed_texts = texts
+
+    results: List[str] = []
+    for i in range(0, len(processed_texts), MAX_BATCH_SIZE):
+        batch  = processed_texts[i : i + MAX_BATCH_SIZE]
+        inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        outputs = model.generate(**inputs, num_beams=4, max_length=512)
+        decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        results.extend(decoded)
+    return results
+
 
 def _split_into_chunks(text: str, max_chars: int = 400) -> List[str]:
     """Split a paragraph into sentence chunks."""

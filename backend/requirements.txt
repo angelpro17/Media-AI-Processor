@@ -3,10 +3,7 @@ uvicorn[standard]
 python-multipart
 pydantic-settings
 httpx
-# Audio & AI models
-torch --index-url https://download.pytorch.org/whl/cpu
-torchaudio --index-url https://download.pytorch.org/whl/cpu
-deepfilternet
+# Audio
 noisereduce
 librosa
 soundfile
@@ -28,3 +25,7 @@ sacremoses
 # Database & Cloud
 supabase
 cloudinary
+# OCR & Video Extraction & Transcription
+easyocr
+openai-whisper
+ffmpeg-python

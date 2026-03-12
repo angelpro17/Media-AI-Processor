@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, Link } from 'react-router-dom'
 import Icon from '@/components/ui/Icon'
 import { NAV_ITEMS } from '@/constants/ui'
 import { WaveformIcon } from '@/assets/icons/icons'
@@ -11,7 +11,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     return (
         <aside className="w-[280px] md:w-64 shrink-0 h-full bg-kick-dark border-r border-kick-border flex flex-col shadow-2xl md:shadow-none">
             <div className="flex items-center justify-between px-6 py-5 border-b border-kick-border">
-                <div className="flex items-center gap-3">
+                <Link to="/" onClick={onClose} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     <div className="p-2 rounded-lg bg-kick-green/10 border border-kick-green/30 shrink-0">
                         <WaveformIcon className="w-5 h-5 text-kick-green" />
                     </div>
@@ -19,7 +19,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         <p className="text-sm font-black text-kick-white tracking-wide leading-tight">Media-AI</p>
                         <p className="text-[11px] text-kick-green font-mono uppercase tracking-widest mt-0.5 opacity-90">Processor</p>
                     </div>
-                </div>
+                </Link>
 
                 {/* Mobile close button */}
                 <button
