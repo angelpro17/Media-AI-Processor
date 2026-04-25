@@ -21,27 +21,50 @@ SUPPORTED_PAIRS = [
 
 # MyMemory API — free up to 10k words/day, no API key needed
 _MYMEMORY_URL = "https://api.mymemory.translated.net/get"
+_REQUEST_COUNT = 0
 
 def _translate_via_api(text: str, src: str, tgt: str) -> str:
-    """Translate a single chunk of text via MyMemory free API."""
-    try:
-        resp = httpx.get(
-            _MYMEMORY_URL,
-            params={"q": text, "langpair": f"{src}|{tgt}"},
-            timeout=15.0,
-        )
-        data = resp.json()
-        translated = data.get("responseData", {}).get("translatedText", "")
-        if translated and data.get("responseStatus") == 200:
-            return translated
-        # Fallback: try matches list
-        matches = data.get("matches", [])
-        if matches:
-            return matches[0].get("translation", text)
+    """Translate a single chunk of text via MyMemory free API with retry."""
+    global _REQUEST_COUNT
+    
+    if not text.strip():
         return text
-    except Exception as e:
-        log.warning("MyMemory API error: %s — returning original text", e)
-        return text
+    
+    for attempt in range(2):
+        try:
+            resp = httpx.get(
+                _MYMEMORY_URL,
+                params={"q": text, "langpair": f"{src}|{tgt}"},
+                timeout=15.0,
+            )
+            _REQUEST_COUNT += 1
+            data = resp.json()
+            
+            # Check quota
+            if data.get("quotaFinished"):
+                log.error("MyMemory quota EXHAUSTED!")
+                return f"[TRANSLATION ERROR: Quota exhausted] {text}"
+            
+            translated = data.get("responseData", {}).get("translatedText", "")
+            if translated and data.get("responseStatus") == 200:
+                return translated
+            
+            # Fallback: try matches list
+            matches = data.get("matches", [])
+            if matches:
+                return matches[0].get("translation", text)
+            
+            log.warning(f"MyMemory no translation for: {text[:50]}")
+            return text
+            
+        except Exception as e:
+            log.warning(f"MyMemory attempt {attempt + 1} failed: {e}")
+            if attempt == 1:  # Last attempt
+                return f"[TRANSLATION ERROR] {text}"
+            import time
+            time.sleep(1)  # Wait before retry
+    
+    return text
 
 # For ROMANCE models, MarianMT requires a target language prefix like ">>pt<<"
 prefix_map = {
