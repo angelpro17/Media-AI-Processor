@@ -16,7 +16,13 @@ log = logging.getLogger(__name__)
 _readers = {}
 
 def get_reader(langs: list):
-    """Langs is e.g. ['es', 'en']"""
+    """Load EasyOCR reader with Render optimization."""
+    if os.getenv("RENDER"):
+        raise RuntimeError(
+            "OCR no disponible en el plan gratuito de Render. "
+            "Sube la imagen a Google Docs para OCR o usa Azure/Google Vision API."
+        )
+    
     lang_key = tuple(sorted(langs))
     if lang_key not in _readers:
         log.info(f"Loading EasyOCR model for {langs}...")

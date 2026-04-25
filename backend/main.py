@@ -39,7 +39,6 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     log.info("AudioClean Pro starting up…")
     
-    # Pre-load common translation models in the background so first translation is instant (if not on a low-RAM cloud like Render)
     def preload_models():
         if os.getenv("RENDER") or os.getenv("DISABLE_PRELOAD"):
             log.info("Skipping model pre-loading on Render to conserve RAM.")
@@ -54,8 +53,27 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.warning("Failed to pre-load translation models: %s", e)
 
+    def prewarm_libreoffice():
+        """Warm up LibreOffice to reduce cold-start latency."""
+        if os.getenv("RENDER"):
+            log.info("Skipping LibreOffice pre-warm on Render.")
+            return
+        try:
+            import subprocess
+            soffice = settings.soffice_path
+            if not os.path.exists(soffice):
+                soffice = "soffice"
+            subprocess.run(
+                [soffice, "--headless", "--convert-to", "pdf", "--outdir", "/tmp", "/dev/null"],
+                capture_output=True, timeout=30, env={**os.environ, "HOME": "/tmp", "TMPDIR": "/tmp"}
+            )
+            log.info("LibreOffice pre-warmed successfully.")
+        except Exception as e:
+            log.warning(f"LibreOffice pre-warm failed: {e}")
+    
     import threading
     threading.Thread(target=preload_models, daemon=True).start()
+    threading.Thread(target=prewarm_libreoffice, daemon=True).start()
     
     yield
     log.info("AudioClean Pro shutting down…")

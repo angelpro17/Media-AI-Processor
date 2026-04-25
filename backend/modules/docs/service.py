@@ -89,14 +89,33 @@ def run_pdf_compress(job_id: str, src_path: str, out_name: str):
 
 
 def _libreoffice_convert(src: str, out_dir: str, out_fmt: str = "pdf") -> str:
-    """Use LibreOffice headless to convert → PDF (or other format)."""
+    """Use LibreOffice headless to convert → PDF (or other format). Robust implementation."""
     soffice = settings.soffice_path
     if not os.path.exists(soffice):
-        # fallback: try system PATH
         soffice = "soffice"
 
-    cmd = [soffice, "--headless", "--norestore", f"--convert-to", out_fmt, "--outdir", out_dir, src]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    timeout = int(os.getenv("LIBREOFFICE_TIMEOUT", "90"))
+    
+    env = os.environ.copy()
+    env["HOME"] = "/tmp"
+    env["TMPDIR"] = "/tmp"
+    env["SAL_USE_VCLPLUGIN"] = "svp"
+
+    cmd = [soffice, "--headless", "--norestore", 
+           f"--convert-to", out_fmt, 
+           "--outdir", out_dir, src]
+
+    try:
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            timeout=timeout,
+            env=env
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"LibreOffice timeout after {timeout}s")
+
     if result.returncode != 0:
         raise RuntimeError(f"LibreOffice error: {result.stderr}")
 

@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # CORS
-    allowed_origins: List[str] = ["*"]  # Public API — allow all origins
+    allowed_origins: List[str] = ["*"]
 
     # Server
     host: str = "0.0.0.0"
@@ -17,6 +17,11 @@ class Settings(BaseSettings):
 
     # LibreOffice
     soffice_path: str = "/usr/bin/soffice"
+    libreoffice_timeout: int = 90
+
+    # Timeouts
+    whisper_timeout: int = 300
+    ocr_timeout: int = 180
 
     class Config:
         env_file = ".env"

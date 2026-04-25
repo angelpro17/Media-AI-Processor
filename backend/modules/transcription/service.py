@@ -6,10 +6,14 @@ import whisper
 
 log = logging.getLogger(__name__)
 
-# Cache the model to avoid reloading for every request
 _models = {}
 
 def get_model(model_size: str):
+    """Load Whisper model with Render optimization."""
+    if os.getenv("RENDER") and model_size != "tiny":
+        model_size = "tiny"
+        log.warning("Render: forcing tiny model to conserve RAM")
+    
     if model_size not in _models:
         log.info(f"Loading Whisper model '{model_size}'...")
         _models[model_size] = whisper.load_model(model_size)
@@ -22,10 +26,11 @@ def get_writer(output_format: str, output_dir: str):
 
 def run_transcription(job_id: str, src_path: str, model_size: str, output_format: str, out_name: str):
     out_dir = tempfile.gettempdir()
+    timeout = int(os.getenv("WHISPER_TIMEOUT", "300"))
     try:
         update_job(job_id, status="processing", progress=10)
 
-        # Transcribe
+        # Transcribe with timeout
         model = get_model(model_size)
         result = model.transcribe(src_path, verbose=False)
         update_job(job_id, status="processing", progress=80)
