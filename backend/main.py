@@ -92,6 +92,11 @@ app.include_router(summarize_router,   prefix="/api/summarize",     tags=["Summa
 app.include_router(pdfeditor_router,   prefix="/api/pdf-editor",    tags=["PDF Editor"])
 
 
+@app.get("/api/ping")
+def ping():
+    return {"status": "ok", "timestamp": __import__("time").time()}
+
+
 @app.get("/api/health")
 def health():
     return {

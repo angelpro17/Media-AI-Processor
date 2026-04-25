@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Icon from '@/components/ui/Icon'
 import { WaveformIcon } from '@/assets/icons/icons'
+import { useServerPing } from '@/hooks/useServerPing'
 
 export default function Layout() {
+    useServerPing()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const location = useLocation()
 
